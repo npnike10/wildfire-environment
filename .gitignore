@@ -1,0 +1,8 @@
+__pycache__/
+.vscode/
+wildfire-0.gif
+*.zip
+*.torch
+*.png
+*.npy
+.DS_Store
