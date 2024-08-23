@@ -1,6 +1,5 @@
 import sys
 import os
-import pytest
 import numpy as np
 import gym
 
@@ -9,7 +8,7 @@ from wildfire_environment.utils.misc import save_frames_as_gif
 
 
 def test_wildfire() -> None:
-    """Function to test the environment's functionality. Runs episodes with random agents in the Wildfire environment and save episode renders as GIFs."""
+    """Function to manually test the environment's functionality. Runs episodes with random agents in the Wildfire environment and save episode renders as GIFs."""
     env = gym.make(
         "wildfire-v0",
         alpha=0.3,
@@ -43,9 +42,4 @@ def test_wildfire() -> None:
             frames.append(env.render())
             if done:
                 break
-        save_frames_as_gif(
-            frames, path="./", filename="wildfire", ep=ep, fps=0.1, dpi=20
-        )
-
-
-test_wildfire()
+        save_frames_as_gif(frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=20)

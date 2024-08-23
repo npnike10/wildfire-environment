@@ -266,7 +266,7 @@ class WildfireEnv(MultiGridEnv):
         else:
             # choose location of initial fire uniformly at random
             if self.initial_fire_size % 2 == 0:
-                # for even sized initial fires, choose top left corner of fire region uniformly at random
+                # for even sized initial fires, choose location of top left corner of fire region uniformly at random
                 top_left_corner = (
                     random.randint(
                         1,
@@ -283,7 +283,7 @@ class WildfireEnv(MultiGridEnv):
                     self.initial_fire_size,
                 )
             else:
-                # for odd sized initial fires, choose center of fire region uniformly at random
+                # for odd sized initial fires, choose location of center of fire region uniformly at random
                 fire_square_center = (
                     random.randint(
                         1 + ((self.initial_fire_size - 1) / 2),
@@ -848,11 +848,13 @@ class WildfireEnv(MultiGridEnv):
 
         return next_obs, rewards, terminated or truncated, infos
 
-    def render(self, close=False, highlight=False, tile_size=TILE_PIXELS):
+    def render(self, dummy_arg, close=False, highlight=False, tile_size=TILE_PIXELS):
         """Render the whole-grid human view
 
         Parameters
         ----------
+        dummy_arg : Any
+            temporary dummy argument to fix a bug where the first argument to render function call is 'human' even though it is not passed in code itself.
         close : bool, optional
             close the rendering window, by default False. Only applicable if render_mode is "human"
         highlight : bool, optional
