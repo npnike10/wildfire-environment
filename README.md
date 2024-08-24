@@ -4,7 +4,7 @@ This repository contains a gym-based multi-agent environment to simulate wildfir
 This environment was developed for use in a MARL project utilizing the [MARLlib](https://marllib.readthedocs.io/en/latest/) library and so is written to work with older Gym, NumPy, and Python versions to ensure compatibility. If you would like a version of this environment that works with newer versions of Gym, NumPy, and Python, please refer to the [gym-multigrid](https://github.com/Tran-Research-Group/gym-multigrid) repository.
 
 ## Installation
-Prior to installation, please ensure the Python v3.8 is being used. To install the environment as a package, please use `pip install wildfire-environment`. 
+Prior to installation, please ensure that Python v3.8 is in use. To install the environment as a package, please use `pip install wildfire-environment`. 
 
 To install from source, please clone this GitHub repository, `cd wildfire-environment` and finally use `poetry install`. This repository uses [Poetry](https://python-poetry.org/docs/) library dependency management. 
 
