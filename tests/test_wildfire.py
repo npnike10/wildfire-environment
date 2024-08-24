@@ -9,6 +9,7 @@ from wildfire_environment.utils.misc import save_frames_as_gif
 
 def test_wildfire() -> None:
     """Function to manually test the environment's functionality. Runs episodes with random agents in the Wildfire environment and save episode renders as GIFs."""
+    # initialize environment. Set the arguments as desired.
     env = gym.make(
         "wildfire-v0",
         alpha=0.3,
@@ -26,10 +27,11 @@ def test_wildfire() -> None:
         selfish_region_ymin=[7, 1],
         selfish_region_ymax=[9, 3],
     )
+
+    # run episodes
     obs, _ = env.reset()
     frames = []
     frames.append(env.render())
-    steps = 0
     num_episodes = 1
 
     for ep in range(num_episodes):
@@ -38,8 +40,8 @@ def test_wildfire() -> None:
                 f"{a.index}": np.random.choice(list(env.actions)) for a in env.agents
             }
             obs, reward, done, _ = env.step(actions)
-            steps += 1
             frames.append(env.render())
             if done:
                 break
+        # save GIF for current episodes
         save_frames_as_gif(frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=20)
