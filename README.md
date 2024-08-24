@@ -20,7 +20,13 @@ Here's a simple example for creating and interacting with the environment:
 import gym
 import wildfire_environment
 
-env = gym.make("wildfire-v0")
+env = gym.make("wildfire-v0", 
+    log_selfish_region_metrics=True,
+    selfish_region_xmin=[7, 13],
+    selfish_region_xmax=[9, 15],
+    selfish_region_ymin=[7, 1],
+    selfish_region_ymax=[9, 3],
+    )
 observation, info = env.reset(seed=42)
 
 for _ in range(1000):
