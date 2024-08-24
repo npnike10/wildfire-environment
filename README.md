@@ -10,6 +10,30 @@ To install from source, please clone this GitHub repository, `cd wildfire-enviro
 
 **Note**: `poetry install` will likely fail for NumPy v1.21.0. This is an issue when installation is done via Poetry but installation works well with `pip install numpy==1.21.0`. Given that the MARL library, for which this environment was developed to be used with, requires the use of old NumPy versions and a clean solution to the installation issue with Poetry isn't known to us, we recommend the user to install NumPy v1.21.0 using `pip` first and then do `poetry install`. For users who use conda to manage virtual environments, they may follow the steps: clone this GitHub repository, `cd wildfire-environment`, create a conda virtual environment with Python 3.8 with `conda create -n wildfire-env python=3.8`, activate the venv with `conda activate wildfire-env`, install NumPy with `pip install numpy==1.21.0`, and finally run `poetry install` to complete the installation. 
 
+## Basic Usage
+
+This repository provides a gym-based environment. The core contribution is the WildfireEnv class, which is a subclass of gym.Env (via MultiGridEnv class). Use of [Gym](https://github.com/openai/gym) environments is standard in RL community and this environment can be used in the same way as a typical gym environment. Note that Gym has now migrated to Gymnasium and to use a version of this environment that is compatible with Gymnasium, please refer to the [gym-multigrid](https://github.com/Tran-Research-Group/gym-multigrid) repository.
+
+Here's a simple example for creating and interacting with the environment:
+
+```
+import gym
+import wildfire_environment
+
+env = gym.make("wildfire-v0")
+observation, info = env.reset(seed=42)
+
+for _ in range(1000):
+    action = env.action_space.sample()
+    observation, reward, done, info = env.step(action)
+
+    if done:
+        observation, info = env.reset()
+env.close()
+```
+
+Please ensure that path to wildfire_environment is present in PYTHONPATH before attempting to import it in your code. 
+
 ## Environment
 ### Wildfire
 ![WildfireEnv Example](./assets/wildfire-env-example.gif)
