@@ -21,6 +21,10 @@ import gym
 import wildfire_environment
 
 env = gym.make("wildfire-v0", 
+    num_agents=2,
+    size=17,
+    initial_fire_size=3,
+    cooperative_reward=False,
     log_selfish_region_metrics=True,
     selfish_region_xmin=[7, 13],
     selfish_region_xmax=[9, 15],
