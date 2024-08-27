@@ -848,13 +848,13 @@ class WildfireEnv(MultiGridEnv):
 
         return next_obs, rewards, terminated or truncated, infos
 
-    def render(self, dummy_arg, close=False, highlight=False, tile_size=TILE_PIXELS):
+    def render(self, mode=None, close=False, highlight=False, tile_size=TILE_PIXELS):
         """Render the whole-grid human view
 
         Parameters
         ----------
-        dummy_arg : Any
-            temporary dummy argument to fix a bug where the first argument to render function call is 'human' even though it is not passed in code itself.
+        mode : str, optional
+            the mode to render with, by default None. To avoid requiring mode to be passed everytime render is called, the variable render_mode set during env initialization is used. This argument does not affect the rendering of the environment.
         close : bool, optional
             close the rendering window, by default False. Only applicable if render_mode is "human"
         highlight : bool, optional
