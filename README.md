@@ -4,11 +4,25 @@ This repository contains a gym-based multi-agent environment to simulate wildfir
 This environment was developed for use in a MARL project utilizing the [MARLlib](https://marllib.readthedocs.io/en/latest/) library and so is written to work with older Gym, NumPy, and Python versions to ensure compatibility. If you would like a version of this environment that works with newer versions of Gym, NumPy, and Python, please refer to the [gym-multigrid](https://github.com/Tran-Research-Group/gym-multigrid) repository.
 
 ## Installation
-Prior to installation either as a package or from source, please ensure that Python v3.8 is in use. To install the environment as a package, please use `pip install wildfire-environment`. 
+Prior to installation either as a package or from source, please ensure that Python v3.8 is in use. We also recommend the use of a virtual environment. To install the environment as a package, please run 
+```
+conda create -n wildfire-env python=3.8
+conda activate wildfire-env
+pip install pip==21 
+pip install wildfire-environment
+```
 
-To install from source, please clone this GitHub repository, `cd wildfire-environment` and finally run `poetry install`. This repository uses [Poetry](https://python-poetry.org/docs/) library dependency management. 
+To install from source, please clone this GitHub repository and follow the steps:
+```
+cd wildfire-environment
+conda create -n wildfire-env python=3.8
+conda activate wildfire-env
+poetry install
+poetry run pip install gym==0.21
+```
+This repository uses [Poetry](https://python-poetry.org/docs/) library dependency management. 
 
-**Note**: `poetry install` will likely fail for Gym v0.21. Given that the MARL library, for which this environment was developed to be used with, requires the use of older Gym versions and a clean solution for this issue isn't known to us, we recommend the user to install Gym v0.21 using `poetry run pip` after the other dependencies have been installed using `poetry install`. For users who use conda to manage virtual environments, they may follow the steps: clone this GitHub repository, `cd wildfire-environment`, create a conda virtual environment with Python 3.8 with `conda create -n wildfire-env python=3.8`, activate the venv with `conda activate wildfire-env`, run `poetry install`, and finally install Gym with `poetry run pip install gym==0.21` to complete the installation. 
+**Note**: `poetry install` will likely fail for Gym v0.21. Given that the MARL library, for which this environment was developed to be used with, requires the use of older Gym versions and a clean solution for this issue isn't known to us, hence we recommend the user to install Gym v0.21 using `poetry run pip` after the other dependencies have been installed using `poetry install`. 
 
 ## Basic Usage
 
