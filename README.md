@@ -22,7 +22,7 @@ poetry run pip install gym==0.21
 ```
 This repository uses [Poetry](https://python-poetry.org/docs/) library dependency management. 
 
-**Note**: `poetry install` will likely fail for Gym v0.21. Given that the MARL library, for which this environment was developed to be used with, requires the use of older Gym versions and a clean solution for this issue isn't known to us, hence we recommend the user to install Gym v0.21 using `poetry run pip` after the other dependencies have been installed using `poetry install`. 
+**Note**: `poetry install` fails to install Gym v0.21. Given that the MARL library, for which this environment was developed to be used with, requires the use of Gym v0.20/0.21, we include an additional step after `poetry install` in above code. 
 
 ## Basic Usage
 
