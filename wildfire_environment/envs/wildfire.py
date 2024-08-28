@@ -38,12 +38,14 @@ class WildfireEnv(MultiGridEnv):
         agent_groups=None,
         agent_view_size=10,
         initial_fire_size=1,
+        fire_in_top_half_only=False,
         max_steps=100,
         partial_obs=False,
         actions_set=WildfireActions,
         render_mode="rgb_array",
         render_selfish_region_boundaries=False,
         cooperative_reward=False,
+        engineered_reward=False,
         log_selfish_region_metrics=False,
         selfish_region_xmin=None,
         selfish_region_xmax=None,
@@ -74,6 +76,8 @@ class WildfireEnv(MultiGridEnv):
             side of the square region visible to an agent with partial observability, by default 10. Only applicable if partial_obs is True
         initial_fire_size : int, optional
             side of the square shaped initial fire region, by default 1
+        fire_in_top_half_only : bool, optional
+            whether to have fire in the top half of the grid only, by default False
         max_steps : int, optional
             maximum number of steps in an episode, by default 100
         partial_obs : bool, optional
@@ -86,6 +90,8 @@ class WildfireEnv(MultiGridEnv):
             whether to render boundaries of selfish regions, by default False
         cooperative_reward : bool, optional
             whether the agents use a cooperative reward, by default False. If True, the agents are fully cooperative and receive the same reward.
+        engineered_reward : bool, optional
+            whether to use engineered reward function, by default False
         log_selfish_region_metrics : bool, optional
             whether to log metrics related to trees in selfish regions, by default False
         selfish_region_xmin : list, optional
@@ -115,11 +121,13 @@ class WildfireEnv(MultiGridEnv):
         self.world = WildfireWorld
         self.grid_size = size
         self.grid_size_without_walls = size - 2
+        self.fire_in_top_half_only = fire_in_top_half_only
         self.initial_fire_size = initial_fire_size
         self.burnt_trees = 0
         self.unburnt_trees = []
         self.trees_on_fire = 0
         self.cooperative_reward = cooperative_reward
+        self.engineered_reward = engineered_reward
         self.render_selfish_region_boundaries = render_selfish_region_boundaries
         self.log_selfish_region_metrics = log_selfish_region_metrics
         if self.log_selfish_region_metrics:
@@ -284,18 +292,33 @@ class WildfireEnv(MultiGridEnv):
                 )
             else:
                 # for odd sized initial fires, choose location of center of fire region uniformly at random
-                fire_square_center = (
-                    random.randint(
-                        1 + ((self.initial_fire_size - 1) / 2),
-                        self.grid_size_without_walls
-                        - ((self.initial_fire_size - 1) / 2),
-                    ),
-                    random.randint(
-                        1 + ((self.initial_fire_size - 1) / 2),
-                        self.grid_size_without_walls
-                        - ((self.initial_fire_size - 1) / 2),
-                    ),
-                )
+                if not self.fire_in_top_half_only:
+                    fire_square_center = (
+                        random.randint(
+                            1 + ((self.initial_fire_size - 1) / 2),
+                            self.grid_size_without_walls
+                            - ((self.initial_fire_size - 1) / 2),
+                        ),
+                        random.randint(
+                            1 + ((self.initial_fire_size - 1) / 2),
+                            self.grid_size_without_walls
+                            - ((self.initial_fire_size - 1) / 2),
+                        ),
+                    )
+                else:
+                    # fire in top half of grid only
+                    fire_square_center = (
+                        random.randint(
+                            1 + ((self.initial_fire_size - 1) / 2),
+                            self.grid_size_without_walls
+                            - ((self.initial_fire_size - 1) / 2),
+                        ),
+                        random.randint(
+                            1 + ((self.initial_fire_size - 1) / 2),
+                            (self.grid_size_without_walls - 1) / 2
+                            - ((self.initial_fire_size - 1) / 2),
+                        ),
+                    )
                 initial_fire = get_initial_fire_coordinates(
                     *fire_square_center,
                     self.grid_size_without_walls,
@@ -699,6 +722,27 @@ class WildfireEnv(MultiGridEnv):
             and j <= self.selfish_ymax[region_index]
         )
 
+    def _on_fire_boundary(self, i, j):
+        """Check if the tree at position (i,j) is on the fire boundary. Tree is on the fire boundary if it has at least one neighbor that is healthy.
+
+        Parameters
+        ----------
+        i : int
+            x-coordinate of tree position
+        j : int
+            y-coordinate of tree position
+
+        Returns
+        -------
+        bool
+            True, if the tree at position (i,j) is on the fire boundary, otherwise False.
+        """
+        for r in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
+            o = self.helper_grid.get(i + r[0], j + r[1])
+            if o is not None and o.type == "tree" and o.state == 0:
+                return True
+        return False
+
     def step(self, actions):
         """Take a step in the environment. Wildfire dynamics are propagated by one time step, and agents move according to their actions.
 
@@ -756,6 +800,12 @@ class WildfireEnv(MultiGridEnv):
             num_trees_to_fire_state_sr = {
                 f"{i}": 0 for i, _ in enumerate(self.selfish_xmin)
             }
+        if self.engineered_reward:
+            num_boundary_trees_to_fire_state = 0
+            if self.log_selfish_region_metrics:
+                num_boundary_trees_to_fire_state_sr = {
+                    f"{i}": 0 for i, _ in enumerate(self.selfish_xmin)
+                }
         trees_to_burnt_state = []
         # loop over all unburnt trees. Burnt trees remain burnt
         for c in self.unburnt_trees:
@@ -772,6 +822,12 @@ class WildfireEnv(MultiGridEnv):
                         if c.region != "common":
                             self.selfish_region_trees_on_fire[int(c.region)] += 1
                             num_trees_to_fire_state_sr[c.region] += 1
+                    if self.engineered_reward:
+                        if self._on_fire_boundary(*pos):
+                            num_boundary_trees_to_fire_state += 1
+                            if self.log_selfish_region_metrics:
+                                if c.region != "common":
+                                    num_boundary_trees_to_fire_state_sr[c.region] += 1
             if c.state == 1:
                 # transition from on fire to burnt with probability 1 - beta + delta_beta * agent_above
                 if np.random.rand() < 1 - self.beta + c.agent_above * self.delta_beta:
@@ -814,19 +870,40 @@ class WildfireEnv(MultiGridEnv):
         else:
             # compute agent rewards
             agent_rewards = np.zeros(self.num_agents)
-            if self.cooperative_reward:
-                agent_rewards -= 0.5 * len(trees_to_fire_state)
-            else:
-                if self.agent_groups:
+            if self.engineered_reward:
+                if self.cooperative_reward:
+                    agent_rewards -= 1 * num_boundary_trees_to_fire_state + 0.5 * (
+                        len(trees_to_fire_state) - num_boundary_trees_to_fire_state
+                    )
+                else:
                     for a in self.agents:
-                        agent_rewards[a.index] -= 0.5 * num_trees_to_fire_state_sr[
-                            f"{self.idx_to_group[a.index]}"
-                        ] + 0.1 * (
-                            len(trees_to_fire_state)
-                            - num_trees_to_fire_state_sr[
-                                f"{self.idx_to_group[a.index]}"
-                            ]
+                        agent_rewards[a.index] -= (
+                            1 * num_boundary_trees_to_fire_state_sr[f"{a.index}"]
+                            + 0.5
+                            * (
+                                num_trees_to_fire_state_sr[f"{a.index}"]
+                                - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
+                            )
+                            + 0.2
+                            * (
+                                num_boundary_trees_to_fire_state
+                                - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
+                            )
+                            + 0.1
+                            * (
+                                (
+                                    len(trees_to_fire_state)
+                                    - num_boundary_trees_to_fire_state
+                                )
+                                - (
+                                    num_trees_to_fire_state_sr[f"{a.index}"]
+                                    - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
+                                )
+                            )
                         )
+            else:
+                if self.cooperative_reward:
+                    agent_rewards -= 0.5 * len(trees_to_fire_state)
                 else:
                     for a in self.agents:
                         agent_rewards[a.index] -= 0.5 * num_trees_to_fire_state_sr[

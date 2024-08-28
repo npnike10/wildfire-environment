@@ -45,3 +45,6 @@ def test_wildfire() -> None:
                 break
         # save GIF for current episodes
         save_frames_as_gif(frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=20)
+
+
+test_wildfire()
