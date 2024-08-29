@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wildfire-environment"
-version = "0.1.5"
+version = "0.1.7"
 description = "Gym-based multi-agent environment to simulate wildfire fighting"
 authors = ["Niket <40545971+npnike10@users.noreply.github.com>"]
 readme = "README.md"

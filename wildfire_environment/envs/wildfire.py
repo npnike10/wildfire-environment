@@ -287,7 +287,7 @@ class WildfireEnv(MultiGridEnv):
                 )
                 initial_fire = get_initial_fire_coordinates(
                     *top_left_corner,
-                    self.grid_size_without_walls,
+                    self.grid_size,
                     self.initial_fire_size,
                 )
             else:
@@ -321,7 +321,7 @@ class WildfireEnv(MultiGridEnv):
                     )
                 initial_fire = get_initial_fire_coordinates(
                     *fire_square_center,
-                    self.grid_size_without_walls,
+                    self.grid_size,
                     self.initial_fire_size,
                 )
             # agent_start_pos is specified during environment initialization
@@ -514,8 +514,8 @@ class WildfireEnv(MultiGridEnv):
 
         Returns
         -------
-        on_fire_trees : list[tuple[int,int]]
-            list of tuples containing position coordinates (x,y) of trees on fire. Coordinates are in grid without wall coordinates
+        trees_on_fire : list[tuple[int,int]]
+            list of tuples containing position coordinates (x,y) of trees on fire.
         time_step : float
             normalized time step of the episode at which time the state was recorded
         """
@@ -530,13 +530,13 @@ class WildfireEnv(MultiGridEnv):
         if print_interpretation:
             print("-------------------------------------------------------------")
             print("State interpretation:")
-        on_fire_trees = []
+        trees_on_fire = []
         for i in range(self.grid_size):
             for j in range(self.grid_size):
                 if state[1, j, i] == 1:
                     if print_interpretation:
                         print(f"Tree at position {(i,j)} is on fire.")
-                    on_fire_trees.append((i, j))
+                    trees_on_fire.append((i, j))
                 for o in self.agents:
                     index = o.index
                     if state[len(STATE_IDX_TO_COLOR_WILDFIRE) + 1 + index, j, i] == 1:
@@ -545,7 +545,7 @@ class WildfireEnv(MultiGridEnv):
         if print_interpretation:
             print(f"Time step: {time_step}")
             print("-------------------------------------------------------------")
-        return on_fire_trees, time_step
+        return trees_on_fire, time_step
 
     def construct_state(self, trees_on_fire, agent_pos, time_step: int):
         """Construct the state representation vector of the environment for given positions of trees on fire and agents
@@ -553,11 +553,11 @@ class WildfireEnv(MultiGridEnv):
         Parameters
         ----------
         trees_on_fire : list
-            list of tuples containing position coordinates (x,y) of trees on fire. Coordinates should be in grid without wall coordinates
+            list of tuples containing position coordinates (x,y) of trees on fire.
         agent_pos : list
-            list of tuples containing position coordinates (x,y) of agents, in order of agent index. Coordinates should be in grid without wall coordinates
+            list of tuples containing position coordinates (x,y) of agents, in order of agent index.
         time_step : int
-            normalized time step of the episode at which time the state was recorded
+            normalized time step of the episode at which time the state was recorded.
 
         Returns
         -------
