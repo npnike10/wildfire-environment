@@ -45,7 +45,7 @@ class WildfireEnv(MultiGridEnv):
         render_mode="rgb_array",
         render_selfish_region_boundaries=False,
         cooperative_reward=False,
-        engineered_reward=False,
+        selfishness_weight=0.2,
         log_selfish_region_metrics=False,
         selfish_region_xmin=None,
         selfish_region_xmax=None,
@@ -90,8 +90,8 @@ class WildfireEnv(MultiGridEnv):
             whether to render boundaries of selfish regions, by default False
         cooperative_reward : bool, optional
             whether the agents use a cooperative reward, by default False. If True, the agents are fully cooperative and receive the same reward.
-        engineered_reward : bool, optional
-            whether to use engineered reward function, by default False
+        selfishness_weight : float, optional
+            parameter to control selfishness in the Markov game reward functions, by default 0.2. Only applicable if cooperative_reward is False. Should be in the range [0,1).
         log_selfish_region_metrics : bool, optional
             whether to log metrics related to trees in selfish regions, by default False
         selfish_region_xmin : list, optional
@@ -127,7 +127,9 @@ class WildfireEnv(MultiGridEnv):
         self.unburnt_trees = []
         self.trees_on_fire = 0
         self.cooperative_reward = cooperative_reward
-        self.engineered_reward = engineered_reward
+        self.selfishness_weight = selfishness_weight
+        if selfishness_weight < 0 or selfishness_weight >= 1:
+            raise ValueError("Selfishness weight should be in the range [0,1).")
         self.render_selfish_region_boundaries = render_selfish_region_boundaries
         self.log_selfish_region_metrics = log_selfish_region_metrics
         if self.log_selfish_region_metrics:
@@ -136,6 +138,13 @@ class WildfireEnv(MultiGridEnv):
             self.selfish_xmax = np.array(selfish_region_xmax)
             self.selfish_ymin = np.array(selfish_region_ymin)
             self.selfish_ymax = np.array(selfish_region_ymax)
+            # raise error if xmin > xmax or ymin > ymax
+            if np.any(self.selfish_xmin > self.selfish_xmax) or np.any(
+                self.selfish_ymin > self.selfish_ymax
+            ):
+                raise ValueError(
+                    "Invalid selfish region. xmin should be less than or equal to xmax and ymin should be less than or equal to ymax for every selfish region."
+                )
             self.selfish_region_trees_on_fire = np.zeros(len(self.selfish_xmin))
             self.selfish_region_burnt_trees = np.zeros(len(self.selfish_xmin))
             self.selfish_region_size = (
@@ -800,12 +809,6 @@ class WildfireEnv(MultiGridEnv):
             num_trees_to_fire_state_sr = {
                 f"{i}": 0 for i, _ in enumerate(self.selfish_xmin)
             }
-        if self.engineered_reward:
-            num_boundary_trees_to_fire_state = 0
-            if self.log_selfish_region_metrics:
-                num_boundary_trees_to_fire_state_sr = {
-                    f"{i}": 0 for i, _ in enumerate(self.selfish_xmin)
-                }
         trees_to_burnt_state = []
         # loop over all unburnt trees. Burnt trees remain burnt
         for c in self.unburnt_trees:
@@ -822,12 +825,6 @@ class WildfireEnv(MultiGridEnv):
                         if c.region != "common":
                             self.selfish_region_trees_on_fire[int(c.region)] += 1
                             num_trees_to_fire_state_sr[c.region] += 1
-                    if self.engineered_reward:
-                        if self._on_fire_boundary(*pos):
-                            num_boundary_trees_to_fire_state += 1
-                            if self.log_selfish_region_metrics:
-                                if c.region != "common":
-                                    num_boundary_trees_to_fire_state_sr[c.region] += 1
             if c.state == 1:
                 # transition from on fire to burnt with probability 1 - beta + delta_beta * agent_above
                 if np.random.rand() < 1 - self.beta + c.agent_above * self.delta_beta:
@@ -870,48 +867,18 @@ class WildfireEnv(MultiGridEnv):
         else:
             # compute agent rewards
             agent_rewards = np.zeros(self.num_agents)
-            if self.engineered_reward:
-                if self.cooperative_reward:
-                    agent_rewards -= 1 * num_boundary_trees_to_fire_state + 0.5 * (
-                        len(trees_to_fire_state) - num_boundary_trees_to_fire_state
-                    )
-                else:
-                    for a in self.agents:
-                        agent_rewards[a.index] -= (
-                            1 * num_boundary_trees_to_fire_state_sr[f"{a.index}"]
-                            + 0.5
-                            * (
-                                num_trees_to_fire_state_sr[f"{a.index}"]
-                                - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
-                            )
-                            + 0.2
-                            * (
-                                num_boundary_trees_to_fire_state
-                                - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
-                            )
-                            + 0.1
-                            * (
-                                (
-                                    len(trees_to_fire_state)
-                                    - num_boundary_trees_to_fire_state
-                                )
-                                - (
-                                    num_trees_to_fire_state_sr[f"{a.index}"]
-                                    - num_boundary_trees_to_fire_state_sr[f"{a.index}"]
-                                )
-                            )
-                        )
+            if self.cooperative_reward:
+                agent_rewards -= 0.5 * len(trees_to_fire_state)
             else:
-                if self.cooperative_reward:
-                    agent_rewards -= 0.5 * len(trees_to_fire_state)
-                else:
-                    for a in self.agents:
-                        agent_rewards[a.index] -= 0.5 * num_trees_to_fire_state_sr[
-                            f"{a.index}"
-                        ] + 0.1 * (
+                for a in self.agents:
+                    agent_rewards[a.index] -= 0.5 * (
+                        num_trees_to_fire_state_sr[f"{a.index}"]
+                        + self.selfishness_weight
+                        * (
                             len(trees_to_fire_state)
                             - num_trees_to_fire_state_sr[f"{a.index}"]
                         )
+                    )
             # agent rewards dictionary
             rewards = {f"{a.index}": agent_rewards[a.index] for a in self.agents}
 

@@ -16,16 +16,17 @@ def test_wildfire() -> None:
         beta=0.8,
         max_steps=10,
         num_agents=2,
-        agent_start_positions=((8, 8), (14, 2)),
+        agent_start_positions=((12, 6), (12, 13)),
         size=17,
         initial_fire_size=3,
         cooperative_reward=False,
+        selfishness_weight=0.5,
         render_selfish_region_boundaries=True,
         log_selfish_region_metrics=True,
-        selfish_region_xmin=[7, 13],
-        selfish_region_xmax=[9, 15],
-        selfish_region_ymin=[7, 1],
-        selfish_region_ymax=[9, 3],
+        selfish_region_xmin=[10, 10],
+        selfish_region_xmax=[14, 14],
+        selfish_region_ymin=[4, 11],
+        selfish_region_ymax=[8, 15],
     )
 
     # run episodes
@@ -44,7 +45,6 @@ def test_wildfire() -> None:
             if done:
                 break
         # save GIF for current episodes
-        save_frames_as_gif(frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=20)
-
-
-test_wildfire()
+        save_frames_as_gif(
+            frames, path="./", filename="wildfire", ep=ep, fps=0.01, dpi=120
+        )
