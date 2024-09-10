@@ -38,7 +38,6 @@ class WildfireEnv(MultiGridEnv):
         agent_groups=None,
         agent_view_size=10,
         initial_fire_size=1,
-        fire_in_top_half_only=False,
         max_steps=100,
         partial_obs=False,
         actions_set=WildfireActions,
@@ -76,8 +75,6 @@ class WildfireEnv(MultiGridEnv):
             side of the square region visible to an agent with partial observability, by default 10. Only applicable if partial_obs is True
         initial_fire_size : int, optional
             side of the square shaped initial fire region, by default 1
-        fire_in_top_half_only : bool, optional
-            whether to have fire in the top half of the grid only, by default False
         max_steps : int, optional
             maximum number of steps in an episode, by default 100
         partial_obs : bool, optional
@@ -121,7 +118,6 @@ class WildfireEnv(MultiGridEnv):
         self.world = WildfireWorld
         self.grid_size = size
         self.grid_size_without_walls = size - 2
-        self.fire_in_top_half_only = fire_in_top_half_only
         self.initial_fire_size = initial_fire_size
         self.burnt_trees = 0
         self.unburnt_trees = []
@@ -301,33 +297,18 @@ class WildfireEnv(MultiGridEnv):
                 )
             else:
                 # for odd sized initial fires, choose location of center of fire region uniformly at random
-                if not self.fire_in_top_half_only:
-                    fire_square_center = (
-                        random.randint(
-                            1 + ((self.initial_fire_size - 1) / 2),
-                            self.grid_size_without_walls
-                            - ((self.initial_fire_size - 1) / 2),
-                        ),
-                        random.randint(
-                            1 + ((self.initial_fire_size - 1) / 2),
-                            self.grid_size_without_walls
-                            - ((self.initial_fire_size - 1) / 2),
-                        ),
-                    )
-                else:
-                    # fire in top half of grid only
-                    fire_square_center = (
-                        random.randint(
-                            1 + ((self.initial_fire_size - 1) / 2),
-                            self.grid_size_without_walls
-                            - ((self.initial_fire_size - 1) / 2),
-                        ),
-                        random.randint(
-                            1 + ((self.initial_fire_size - 1) / 2),
-                            (self.grid_size_without_walls - 1) / 2
-                            - ((self.initial_fire_size - 1) / 2),
-                        ),
-                    )
+                fire_square_center = (
+                    random.randint(
+                        1 + ((self.initial_fire_size - 1) / 2),
+                        self.grid_size_without_walls
+                        - ((self.initial_fire_size - 1) / 2),
+                    ),
+                    random.randint(
+                        1 + ((self.initial_fire_size - 1) / 2),
+                        self.grid_size_without_walls
+                        - ((self.initial_fire_size - 1) / 2),
+                    ),
+                )
                 initial_fire = get_initial_fire_coordinates(
                     *fire_square_center,
                     self.grid_size,
