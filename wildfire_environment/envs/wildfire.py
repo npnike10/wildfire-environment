@@ -44,7 +44,7 @@ class WildfireEnv(MultiGridEnv):
         render_mode="rgb_array",
         render_selfish_region_boundaries=False,
         cooperative_reward=False,
-        selfishness_weight=0.2,
+        altruism_weight=0.2,
         log_selfish_region_metrics=False,
         selfish_region_xmin=None,
         selfish_region_xmax=None,
@@ -87,8 +87,8 @@ class WildfireEnv(MultiGridEnv):
             whether to render boundaries of selfish regions, by default False
         cooperative_reward : bool, optional
             whether the agents use a cooperative reward, by default False. If True, the agents are fully cooperative and receive the same reward.
-        selfishness_weight : float, optional
-            parameter to control selfishness in the Markov game reward functions, by default 0.2. Only applicable if cooperative_reward is False. Should be in the range [0,1).
+        altruism_weight : float, optional
+            parameter to control altruism in the Markov game reward functions, by default 0.2. Only applicable if cooperative_reward is False. Should be in the range [0,1).
         log_selfish_region_metrics : bool, optional
             whether to log metrics related to trees in selfish regions, by default False
         selfish_region_xmin : list, optional
@@ -123,9 +123,9 @@ class WildfireEnv(MultiGridEnv):
         self.unburnt_trees = []
         self.trees_on_fire = 0
         self.cooperative_reward = cooperative_reward
-        self.selfishness_weight = selfishness_weight
-        if selfishness_weight < 0 or selfishness_weight >= 1:
-            raise ValueError("Selfishness weight should be in the range [0,1).")
+        self.altruism_weight = altruism_weight
+        if altruism_weight < 0 or altruism_weight >= 1:
+            raise ValueError("Altruism weight should be in the range [0,1).")
         self.render_selfish_region_boundaries = render_selfish_region_boundaries
         self.log_selfish_region_metrics = log_selfish_region_metrics
         if self.log_selfish_region_metrics:
@@ -854,7 +854,7 @@ class WildfireEnv(MultiGridEnv):
                 for a in self.agents:
                     agent_rewards[a.index] -= 0.5 * (
                         num_trees_to_fire_state_sr[f"{a.index}"]
-                        + self.selfishness_weight
+                        + self.altruism_weight
                         * (
                             len(trees_to_fire_state)
                             - num_trees_to_fire_state_sr[f"{a.index}"]

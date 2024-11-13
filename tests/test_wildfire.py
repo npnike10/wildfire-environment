@@ -12,21 +12,22 @@ def test_wildfire() -> None:
     # initialize environment. Set the arguments as desired.
     env = gym.make(
         "wildfire-v0",
-        alpha=0.3,
-        beta=0.8,
-        max_steps=10,
+        alpha=0.13,
+        beta=0.9,
+        delta_beta=0.7,
+        max_steps=100,
         num_agents=2,
-        agent_start_positions=((12, 6), (12, 13)),
-        size=17,
+        agent_start_positions=((7, 3), (7, 7)),
+        size=11,
         initial_fire_size=3,
         cooperative_reward=False,
-        selfishness_weight=0.5,
+        altruism_weight=0.2,
         render_selfish_region_boundaries=True,
         log_selfish_region_metrics=True,
-        selfish_region_xmin=[10, 10],
-        selfish_region_xmax=[14, 14],
-        selfish_region_ymin=[4, 11],
-        selfish_region_ymax=[8, 15],
+        selfish_region_xmin=[6, 6],
+        selfish_region_xmax=[8, 8],
+        selfish_region_ymin=[2, 7],
+        selfish_region_ymax=[4, 9],
     )
 
     # run episodes
@@ -43,8 +44,12 @@ def test_wildfire() -> None:
             obs, reward, done, _ = env.step(actions)
             frames.append(env.render())
             if done:
+                print(env.trees_on_fire+env.burnt_trees)
                 break
         # save GIF for current episodes
         save_frames_as_gif(
-            frames, path="./", filename="wildfire", ep=ep, fps=0.01, dpi=120
+            frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=40
         )
+
+
+test_wildfire()
