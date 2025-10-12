@@ -15,10 +15,14 @@ def test_wildfire() -> None:
         alpha=0.13,
         beta=0.9,
         delta_beta=0.7,
+        use_wind=True,
+        wind_alpha_base=0.1,
+        wind_alpha_max=0.2,
+        wind_alpha_min=0.05,
         max_steps=100,
         num_agents=2,
         agent_start_positions=((7, 3), (7, 7)),
-        size=11,
+        size=17,
         initial_fire_size=3,
         cooperative_reward=False,
         altruism_weight=0.2,
@@ -44,11 +48,10 @@ def test_wildfire() -> None:
             obs, reward, done, _ = env.step(actions)
             frames.append(env.render())
             if done:
-                print(env.trees_on_fire+env.burnt_trees)
                 break
         # save GIF for current episodes
         save_frames_as_gif(
-            frames, path="./", filename="wildfire", ep=ep, fps=1, dpi=40
+            frames, path="./", filename="wildfire", ep=ep, fps=5, dpi=40
         )
 
 

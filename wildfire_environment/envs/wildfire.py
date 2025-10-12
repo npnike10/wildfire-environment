@@ -1,5 +1,4 @@
-"""Defines the WildfireEnv class, which simulates dynamics of unmanned aerial vehicles (UAVs) fighting a spreading wildfire
-"""
+"""Defines the WildfireEnv class, which simulates dynamics of unmanned aerial vehicles (UAVs) fighting a spreading wildfire"""
 
 from collections import OrderedDict
 import random
@@ -31,6 +30,10 @@ class WildfireEnv(MultiGridEnv):
         alpha=0.05,
         beta=0.99,
         delta_beta=0,
+        use_wind=False,
+        wind_alpha_base=0.05,
+        wind_alpha_max=0.1,  
+        wind_alpha_min=0.025,  
         size=17,
         num_agents=2,
         agent_start_positions=((1, 1), (15, 15)),
@@ -61,6 +64,14 @@ class WildfireEnv(MultiGridEnv):
             parameter for the wildfire dynamics model, by default 0.99
         delta_beta : float, optional
             parameter for the wildfire dynamics model, by default 0
+        use_wind : bool, optional
+            whether to use the wind model for wildfire dynamics, by default True
+        wind_alpha_base : float, optional
+            alpha for crosswind/no-wind zone, by default 0.1
+        wind_alpha_max : float, optional
+            alpha for downwind direction, by default 0.2
+        wind_alpha_min : float, optional
+             alpha for upwind direction, by default 0.05
         size : int, optional
             side of the square gridworld, by default 17
         num_agents : int, optional
@@ -103,6 +114,21 @@ class WildfireEnv(MultiGridEnv):
         self.alpha = alpha
         self.beta = beta
         self.delta_beta = delta_beta
+        self.use_wind = use_wind
+        self.wind_alpha_base = wind_alpha_base
+        self.wind_alpha_max = wind_alpha_max
+        self.wind_alpha_min = wind_alpha_min
+        if self.use_wind:
+            # Generate the deterministic wind field for the entire grid
+            self.wind_field = self._setup_wind_field(size)
+        else:
+            self.wind_field = np.zeros((size, size, 2), dtype=int)
+        self.directions = [
+            np.array([1, 0]),
+            np.array([-1, 0]),
+            np.array([0, -1]),
+            np.array([0, 1]),
+        ]  # east, west, north, south
         self.num_agents = num_agents
         self.agent_start_positions = agent_start_positions
         self.agent_colors = agent_colors
@@ -672,13 +698,8 @@ class WildfireEnv(MultiGridEnv):
             the number of neighboring trees on fire
         """
         num = 0
-        relative_pos = [
-            np.array([1, 0]),
-            np.array([-1, 0]),
-            np.array([0, 1]),
-            np.array([0, -1]),
-        ]
-        for r in relative_pos:
+        directions_with_fire = [0, 0, 0, 0]  # east, west, north, south
+        for i, r in enumerate(self.directions):
             neighbor_pos = tree_pos + r
             if neighbor_pos[0] >= 0 and neighbor_pos[0] < self.helper_grid.width:
                 if neighbor_pos[1] >= 0 and neighbor_pos[1] < self.helper_grid.height:
@@ -686,7 +707,8 @@ class WildfireEnv(MultiGridEnv):
                     if o is not None and o.type == "tree":
                         if o.state == 1:
                             num += 1
-        return num
+                            directions_with_fire[i] = 1
+        return num, directions_with_fire
 
     def in_selfish_region(self, i: int, j: int, region_index: int) -> bool:
         """Check if given tree is in region of selfish interest with given index
@@ -732,6 +754,33 @@ class WildfireEnv(MultiGridEnv):
             if o is not None and o.type == "tree" and o.state == 0:
                 return True
         return False
+
+    def _setup_wind_field(self, N):
+        """
+        Creates a deterministic wind field (N x N x 2 array of unit vectors)
+        based on three zones: Bulk Flow (East), Center Channel (West),
+        and Edges (North).
+        """
+        wind_field = np.zeros((N, N, 2), dtype=int)
+
+        # Zone boundaries
+        N_sixth = N // 6
+        N_third = N // 3
+        N_two_thirds = 2 * N // 3
+
+        # 1. Bulk Flow (Majority Eastward: W = (1, 0)) - The new default
+        wind_field[:, :] = [1, 0]
+
+        # 2. Center Channel (Westward: W = (-1, 0)) - Represents opposing flow/channeling
+        # N/3 < x < 2N/3 and N/3 < y < 2N/3
+        wind_field[N_third:N_two_thirds, N_third:N_two_thirds] = [-1, 0]
+
+        # 3. North/South Edges (Northward: W = (0, 1)) - Represents recirculation/boundary effects
+        # y < N/6 (North Edge) OR y > 5N/6 (South Edge)
+        wind_field[:, :N_sixth] = [0, 1]  # North Edge
+        wind_field[:, N - N_sixth :] = [0, 1]  # South Edge
+
+        return wind_field
 
     def step(self, actions):
         """Take a step in the environment. Wildfire dynamics are propagated by one time step, and agents move according to their actions.
@@ -795,10 +844,26 @@ class WildfireEnv(MultiGridEnv):
         for c in self.unburnt_trees:
             if c.state == 0:
                 pos = np.array(c.pos)
-                # transition from healthy to on fire with probability 1 - (1 - alpha)^n
-                if np.random.rand() < 1 - (1 - self.alpha) ** self.neighbors_on_fire(
-                    pos
-                ):
+                # compute probability for transition from healthy to on fire
+                if self.use_wind:
+                    product = 1
+                    wind_vec = self.wind_field[pos[0], pos[1]]
+                    num_neighbors_on_fire, directions_with_fire = (
+                        self.neighbors_on_fire(pos)
+                    )
+                    for index, element in enumerate(directions_with_fire):
+                        if element:
+                            dot_product = np.dot(wind_vec, self.directions[index])
+                            if dot_product == 1:
+                                product *= 1 - self.wind_alpha_min
+                            elif dot_product == 0:
+                                product *= 1 - self.wind_alpha_base
+                            elif dot_product == -1:
+                                product *= 1 - self.wind_alpha_max
+                else:  # with probability 1 - (1 - alpha)^n
+                    product = (1 - self.alpha) ** num_neighbors_on_fire
+                healthy_to_fire_probability = 1 - product
+                if np.random.rand() < healthy_to_fire_probability:
                     # update relevant attributes and lists
                     trees_to_fire_state.append(c)
                     self.trees_on_fire += 1
