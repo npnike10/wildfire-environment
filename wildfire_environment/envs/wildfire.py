@@ -845,12 +845,12 @@ class WildfireEnv(MultiGridEnv):
             if c.state == 0:
                 pos = np.array(c.pos)
                 # compute probability for transition from healthy to on fire
+                num_neighbors_on_fire, directions_with_fire = (
+                        self.neighbors_on_fire(pos)
+                    )
                 if self.use_wind:
                     product = 1
                     wind_vec = self.wind_field[pos[0], pos[1]]
-                    num_neighbors_on_fire, directions_with_fire = (
-                        self.neighbors_on_fire(pos)
-                    )
                     for index, element in enumerate(directions_with_fire):
                         if element:
                             dot_product = np.dot(wind_vec, self.directions[index])
@@ -916,15 +916,27 @@ class WildfireEnv(MultiGridEnv):
             if self.cooperative_reward:
                 agent_rewards -= 0.5 * len(trees_to_fire_state)
             else:
-                for a in self.agents:
-                    agent_rewards[a.index] -= 0.5 * (
-                        num_trees_to_fire_state_sr[f"{a.index}"]
-                        + self.altruism_weight
-                        * (
-                            len(trees_to_fire_state)
-                            - num_trees_to_fire_state_sr[f"{a.index}"]
+                if self.agent_groups:
+                    for i, group in enumerate(self.agent_groups):
+                        for a in group:
+                            agent_rewards[a] -= 0.5 * (
+                            num_trees_to_fire_state_sr[f"{i}"]
+                            + self.altruism_weight
+                            * (
+                                len(trees_to_fire_state)
+                                - num_trees_to_fire_state_sr[f"{i}"]
+                            )
                         )
-                    )
+                else:
+                    for a in self.agents:
+                        agent_rewards[a.index] -= 0.5 * (
+                            num_trees_to_fire_state_sr[f"{a.index}"]
+                            + self.altruism_weight
+                            * (
+                                len(trees_to_fire_state)
+                                - num_trees_to_fire_state_sr[f"{a.index}"]
+                            )
+                        )
             # agent rewards dictionary
             rewards = {f"{a.index}": agent_rewards[a.index] for a in self.agents}
 
